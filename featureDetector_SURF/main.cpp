@@ -88,26 +88,57 @@ void featureDetector_SURF(const Mat &img0, const Mat &img1)
 
 	matcher.match(descriptors0, descriptors1, matches);
 
+	
 	Mat img_matches;
-	for (int i = 0; i < (int)matches.size(); i++)
+	vector<DMatch> valid_matches;
+	vector<DMatch> invalid_matches;
+	
+	for (int i = 0; i < 100; i++)
 	{
 		double dist = matches[i].distance;
-		min_dist = min(min_dist, dist);
-		max_dist = max(max_dist, dist);
+		if (matches[i].distance > 0.5) continue;
+		
+		good_matches.clear();
+		good_matches.push_back(matches[i]);
 		drawMatches(img0, keypoints0,
 			img1, keypoints1,
 			good_matches, img_matches,
 			Scalar::all(-1), Scalar::all(-1),
 			vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+		int k = waitKey(0);
+		if (k == 49)
+		{
+			valid_matches.push_back(matches[i]);
+		}
+		else invalid_matches.push_back(matches[i]);
 	}
-	mid_dist = 0.15;
+
+	FILE *file;
+	file = fopen("valid_matches.txt", "w");
+	for (int i = 0; i < (int)valid_matches.size(); i++)
+	{
+		int j = valid_matches[i].queryIdx;
+		int k = valid_matches[i].trainIdx;
+		fprintf(file, "%.3lf %.3lf %.3lf %.3lf %.3lf\n", keypoints0[j].size, keypoints0[j].angle, keypoints1[k].size, keypoints1[k].angle, valid_matches[i].distance);
+	}
+	fclose(file);
+	file = fopen("invalid_matches.txt", "w");
+	for (int i = 0; i < (int)invalid_matches.size(); i++)
+	{
+		int j = invalid_matches[i].queryIdx;
+		int k = invalid_matches[i].trainIdx;
+		fprintf(file, "%.3lf %.3lf %.3lf %.3lf %.3lf\n", keypoints0[j].size, keypoints0[j].angle, keypoints1[k].size, keypoints1[k].angle, invalid_matches[i].distance);
+	}
+	fclose(file);
+	
+	mid_dist = 0.6;
 
 	printf("max dist : %.3lf\n", max_dist);
 	printf("min dist : %.3lf\n", min_dist);
 
 	for (int i = 0; i < (int)matches.size(); i++)
 	{
-		if (matches[i].distance <= mid_dist)
+		if (matches[i].distance > mid_dist)
 		{
 			good_matches.push_back(matches[i]);
 		}
